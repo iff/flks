@@ -17,6 +17,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: install nix
+        uses: cachix/install-nix-action@6004951b182f8860210c8d6f0d808ec5b1a33d28 # v25
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          nix_path: nixpkgs=channel:nixos-unstable
+
       - name: flup
         run: |
           git config user.name github-actions[bot]
