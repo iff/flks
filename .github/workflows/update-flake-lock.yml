@@ -1,0 +1,44 @@
+name: update-flake-lock
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 20 * * 4"
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: flup
+        run: |
+          git config user.name github-actions[bot]
+          # https://api.github.com/users/github-actions[bot] seems to be the API entry for the 
+          # github-actions bot, which also contains the ID 41898282.
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          nix --accept-flake-config flake update --commit-lock-file
+
+      - name: flakers
+        id: commit
+        run: |
+          delimiter="$(openssl rand -hex 16)"
+          echo "message<<${delimiter}" >> "${GITHUB_OUTPUT}"
+          git log -1 --pretty=%B | tail +3 | nix run github:iff/flakers >> "${GITHUB_OUTPUT}"
+          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
+
+      - name: open pr
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
+        with:
+          token: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
+          title: "flup: update flks"
+          body: "${{ steps.commit.outputs.message }}"
+          branch: automated/flake-updates
+          delete-branch: true
+          assignees: iff
